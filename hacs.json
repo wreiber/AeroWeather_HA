@@ -1,0 +1,7 @@
+{
+  "name": "AeroWeather.gov METAR/TAF",
+  "content_in_root": false,
+  "domain": "aeroweather",
+  "country": "US",
+  "render_readme": true
+}
