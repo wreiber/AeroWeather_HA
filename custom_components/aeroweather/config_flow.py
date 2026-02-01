@@ -98,4 +98,5 @@ class AeroWeatherOptionsFlow(config_entries.OptionsFlow):
                 ): vol.Coerce(int),
             }
         )
-        return self.async_show_form("init", schema, errors)
+        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
+
