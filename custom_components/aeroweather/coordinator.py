@@ -24,7 +24,7 @@ class AeroWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.entry = entry
         self.session: ClientSession = async_get_clientsession(hass)
 
-        data = {**entry.data, **entry.options}
+        data = {**entry.data, **(entry.options or {})}
         self.icaos = data.get(CONF_ICAOS, [])
         scan = int(data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
 
@@ -33,8 +33,19 @@ class AeroWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             logger=__import__("logging").getLogger(__name__),
             name=DOMAIN,
             update_interval=timedelta(seconds=scan),
-            update_method=self._async_update
+            update_method=self._async_update,
         )
+
+    async def _async_update(self) -> dict[str, Any]:
+        """Fetch METAR data for configured ICAO stations."""
+        results: dict[str, Any] = {}
+
+        for icao in self.icaos:
+            icao = icao.upper().strip()
+            # TODO: replace this with your real METAR fetch logic
+            results[icao] = {"raw": None,}
+
+        return results
 
 async def _fetch(self, endpoint: str, ids: str):
     async with self.session.get(
