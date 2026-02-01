@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+import re
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
 from homeassistant.const import UnitOfLength, UnitOfPressure, UnitOfSpeed, UnitOfTemperature
@@ -122,14 +123,51 @@ def _wind_gust_kt(metar: dict[str, Any]) -> int | None:
     return _to_int(_first_present(metar, ["wgst", "windGust", "wgstKt", "wind_gust_kt"]))
 
 
+_VIS_RE = re.compile(r"\b(?:(P)?(\d+)(?:\s+(\d+)/(\d+))?|(\d+)/(\d+))SM\b")
+
+def _parse_vis_from_raw_sm(raw: str) -> float | None:
+    """Parse visibility in SM from raw METAR like 10SM, P6SM, 1 1/2SM, 3/4SM."""
+    if not raw:
+        return None
+
+    m = _VIS_RE.search(raw)
+    if not m:
+        # CAVOK implies >=10km (~6.2SM)
+        if "CAVOK" in raw:
+            return 6.2
+        return None
+
+    whole = m.group(2)
+    num1, den1 = m.group(3), m.group(4)
+    num2, den2 = m.group(5), m.group(6)
+
+    vis = float(whole) if whole else 0.0
+    if num1 and den1:
+        vis += float(num1) / float(den1)
+    elif num2 and den2:
+        vis += float(num2) / float(den2)
+
+    return vis
+
+
 def _visibility_sm(metar: dict[str, Any]) -> float | None:
+    # 1) Try structured numeric fields first
     vis_sm = _to_float(_first_present(metar, ["visib", "vis", "visibility", "visSm"]))
     if vis_sm is not None:
         return vis_sm
+
+    # 2) Try meters → miles
     vis_m = _to_float(_first_present(metar, ["visibilityMeters", "visMeters", "vis_m"]))
     if vis_m is not None:
         return vis_m / 1609.344
+
+    # 3) Fallback: parse from raw METAR text (e.g., 10SM, 1 1/2SM, P6SM)
+    raw = _first_present(metar, ["rawOb", "rawText", "text", "metar"])
+    if isinstance(raw, str):
+        return _parse_vis_from_raw_sm(raw)
+
     return None
+
 
 
 def _altim_inhg(metar: dict[str, Any]) -> float | None:
