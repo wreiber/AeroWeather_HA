@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from math import cos, radians, sin
-from typing import Any, Callable
-
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
 from homeassistant.const import UnitOfLength, UnitOfPressure, UnitOfSpeed, UnitOfTemperature
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
