@@ -35,19 +35,32 @@ class AeroWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             update_interval=timedelta(seconds=scan),
         )
 
-    async def _fetch(self, endpoint: str, ids: str):
-        async with self.session.get(
-            f"{API_BASE}/{endpoint}",
-            params={"ids": ids, "format": "json"},
-            timeout=20,
-        ) as resp:
-            if resp.status != 200:
-                raise UpdateFailed(f"{endpoint} HTTP {resp.status}")
-            return await resp.json()
+async def _fetch(self, endpoint: str, ids: str):
+    async with self.session.get(
+        f"{API_BASE}/{endpoint}",
+        params={"ids": ids, "format": "json"},
+        timeout=20,
+    ) as resp:
+        # No content = no TAF/METAR available (common for TAF). Not an error.
+        if resp.status == 204:
+            return []
 
-    async def _async_update_data(self):
-        if not self.icaos:
-            return {}
+        if resp.status != 200:
+            text = await resp.text()
+            raise UpdateFailed(f"{endpoint} HTTP {resp.status}: {text[:200]}")
+
+        payload = await resp.json(content_type=None)
+
+        # Normalize list vs wrapped dict responses
+        if isinstance(payload, list):
+            return payload
+        if isinstance(payload, dict):
+            for key in ("data", "results", endpoint):
+                val = payload.get(key)
+                if isinstance(val, list):
+                    return val
+        return []
+
 
         ids = ",".join(self.icaos)
         try:
