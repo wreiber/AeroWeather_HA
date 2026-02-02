@@ -111,34 +111,25 @@ def _to_int(val: Any) -> int | None:
         return None
 
 
-def _parse_ceiling_ft(metar: dict[str, Any]) -> int | None:
+def _ceil_ft_from_layers(metar: dict[str, Any]) -> float:
     """
-    Ceiling = lowest BKN/OVC/VV layer base (ft AGL).
-    AviationWeather API payloads vary; handle common shapes.
+    Return ceiling in feet AGL.
+    If no ceiling is reported (CLR / SKC / FEW / SCT only),
+    return 0 to indicate 'Clear'.
     """
-    # Common modern shape: "clouds": [{"cover":"BKN","base":2500}, ...]
-    clouds = metar.get("clouds")
-    candidates: list[int] = []
+    layers = metar.get("clouds")
+    if not layers:
+        return 0.0
 
-    if isinstance(clouds, list):
-        for layer in clouds:
-            if not isinstance(layer, dict):
-                continue
-            cover = (layer.get("cover") or layer.get("cvg") or "").upper()
-            base = _to_int(layer.get("base") or layer.get("baseFt") or layer.get("bas"))
-            if cover in {"BKN", "OVC", "VV"} and base is not None:
-                candidates.append(base)
+    ceilings: list[float] = []
+    for layer in layers:
+        cover = layer.get("cover")
+        base = _to_float(layer.get("base_ft_agl"))
+        if cover in ("BKN", "OVC", "VV") and base is not None:
+            ceilings.append(base)
 
-    # Older/alternate shapes: cldCvg1/cldBas1... etc.
-    for i in range(1, 7):
-        cover = (metar.get(f"cldCvg{i}") or metar.get(f"cldCvg{i}".lower()) or "")
-        base = metar.get(f"cldBas{i}") or metar.get(f"cldBas{i}".lower())
-        cover_u = str(cover).upper() if cover is not None else ""
-        base_i = _to_int(base)
-        if cover_u in {"BKN", "OVC", "VV"} and base_i is not None:
-            candidates.append(base_i)
+    return min(ceilings) if ceilings else 0.0
 
-    return min(candidates) if candidates else None
 
 
 def _flight_category_from_metar(metar: dict[str, Any]) -> str | None:
