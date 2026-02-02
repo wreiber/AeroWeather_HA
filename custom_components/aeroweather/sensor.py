@@ -226,11 +226,13 @@ def _visibility_sm(metar: dict[str, Any]) -> float | None:
     return None
 
 
-
 def _altim_inhg(metar: dict[str, Any]) -> float | None:
-    raw = _first_present(metar, ["altim", "altimHg", "altimeter", "altim_inhg", "qnh", "QNH"])
+    raw = _first_present(
+        metar,
+        ["altim", "altimHg", "altimeter", "altim_inhg", "qnh", "QNH"],
+    )
     return _altimeter_to_inhg(raw)
-
+    
 
 def _temp_c(metar: dict[str, Any]) -> float | None:
     return _to_float(_first_present(metar, ["temp", "tempC", "temperature", "tmpc"]))
@@ -252,7 +254,7 @@ def _parse_ceiling_ft(metar: dict[str, Any]) -> float:
     """Return ceiling in feet AGL. If no ceiling is reported, return 0 (Clear)."""
     layers = metar.get("clouds")
     if not layers:
-        return 0.0
+        return 0
 
     ceilings: list[float] = []
     for layer in layers:
@@ -261,7 +263,7 @@ def _parse_ceiling_ft(metar: dict[str, Any]) -> float:
         if cover in ("BKN", "OVC", "VV") and base is not None:
             ceilings.append(base)
 
-    return min(ceilings) if ceilings else 0.0
+    return min(ceilings) if ceilings else 0
 
 # --- Density altitude support ---
 
