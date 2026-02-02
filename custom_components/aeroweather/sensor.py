@@ -119,7 +119,7 @@ def _ceil_ft_from_layers(metar: dict[str, Any]) -> float:
     """
     layers = metar.get("clouds")
     if not layers:
-        return "Clear"
+        return 0.0
 
     ceilings: list[float] = []
     for layer in layers:
@@ -128,7 +128,7 @@ def _ceil_ft_from_layers(metar: dict[str, Any]) -> float:
         if cover in ("BKN", "OVC", "VV") and base is not None:
             ceilings.append(base)
 
-    return min(ceilings) if ceilings else "Clear"
+    return min(ceilings) if ceilings else 0.0
 
 
 
