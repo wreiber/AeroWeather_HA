@@ -250,33 +250,33 @@ def _dewpoint_c(metar: dict[str, Any]) -> float | None:
 
 
 def _wx_string(metar: dict[str, Any]) -> str | None:
-    # --- Density altitude support ---
+    wx = metar.get("wx")
+    if not wx:
+        return None
+    if isinstance(wx, list):
+        return " ".join([str(x) for x in wx if x])
+    return str(wx)
 
-# Field elevation in feet (MSL). Add your airports here.
-# If an airport isn't listed, Density Altitude will show "unknown".
+# --- Density altitude support ---
+
 FIELD_ELEV_FT: dict[str, int] = {
     "KCLT": 748,
     "KINT": 969,
     "KRUQ": 772,
-    "KEXX": 733,
 }
 
 def _pressure_altitude_ft(field_elev_ft: float, altimeter_inhg: float) -> float:
-    """Pressure altitude (ft) approximation."""
     return field_elev_ft + (29.92 - altimeter_inhg) * 1000.0
 
 def _isa_temp_c_at_alt_ft(alt_ft: float) -> float:
-    """ISA temperature (°C) at altitude."""
     return 15.0 - 2.0 * (alt_ft / 1000.0)
 
 def _density_altitude_ft(field_elev_ft: float, altimeter_inhg: float, oat_c: float) -> float:
-    """Density altitude (ft) approximation."""
     pa = _pressure_altitude_ft(field_elev_ft, altimeter_inhg)
     isa = _isa_temp_c_at_alt_ft(pa)
     return pa + 120.0 * (oat_c - isa)
 
 def _density_altitude_station(data: dict[str, Any], icao: str) -> int | None:
-    """Compute density altitude for a station in feet (rounded)."""
     metar = _metar_item(data, icao) or {}
     if not metar:
         return None
@@ -287,12 +287,12 @@ def _density_altitude_station(data: dict[str, Any], icao: str) -> int | None:
 
     alt_inhg = _altim_inhg(metar)
     temp_c = _temp_c(metar)
-
     if alt_inhg is None or temp_c is None:
         return None
 
     da_ft = _density_altitude_ft(float(elev_ft), float(alt_inhg), float(temp_c))
     return int(round(da_ft))
+
 
     wx = _first_present(metar, ["wxString", "presentWeather", "wx"])
     if isinstance(wx, str) and wx.strip():
